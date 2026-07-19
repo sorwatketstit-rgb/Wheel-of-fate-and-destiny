@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wheel of Names</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #fff;
+      color: #111;
+      font-family: Arial, Helvetica, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .app {
+      width: min(92vw, 720px);
+      text-align: center;
+      padding: 36px 16px 60px;
+    }
+
+    h1 {
+      margin: 0 0 20px;
+      font-size: 30px;
+      font-weight: 700;
+    }
+
+    .wheel-wrap {
+      position: relative;
+      width: min(78vw, 520px);
+      aspect-ratio: 1;
+      margin: 0 auto 28px;
+    }
+
+    #wheel {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 50%;
+      border: 5px solid #111;
+      cursor: pointer;
+      transition: transform 5s cubic-bezier(.12,.72,.08,1);
+      background: #fff;
+    }
+
+    .pointer {
+      position: absolute;
+      top: 50%;
+      right: -16px;
+      transform: translateY(-50%);
+      width: 0;
+      height: 0;
+      border-top: 18px solid transparent;
+      border-bottom: 18px solid transparent;
+      border-right: 34px solid #111;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .center-dot {
+      position: absolute;
+      inset: 50% auto auto 50%;
+      transform: translate(-50%, -50%);
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: #fff;
+      border: 5px solid #111;
+      pointer-events: none;
+    }
+
+    .hint {
+      margin: -10px 0 20px;
+      font-size: 14px;
+      color: #555;
+    }
+
+    textarea {
+      width: min(100%, 520px);
+      min-height: 180px;
+      resize: vertical;
+      border: 2px solid #111;
+      border-radius: 8px;
+      padding: 14px;
+      font: 16px/1.45 Arial, Helvetica, sans-serif;
+      background: #fff;
+      color: #111;
+      outline: none;
+    }
+
+    textarea:focus {
+      box-shadow: 0 0 0 3px rgba(0,0,0,.12);
+    }
+
+    #result {
+      min-height: 34px;
+      margin-top: 18px;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    button {
+      margin-top: 14px;
+      border: 2px solid #111;
+      background: #111;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 7px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    button:hover { background: #333; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+
+    @media (max-width: 520px) {
+      h1 { font-size: 25px; }
+      .app { padding-top: 22px; }
+      .wheel-wrap { width: min(82vw, 430px); }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>Wheel of Names</h1>
+
+    <div class="wheel-wrap">
+      <canvas id="wheel" width="800" height="800" aria-label="Wheel of names"></canvas>
+      <div class="pointer"></div>
+      <div class="center-dot"></div>
+    </div>
+
+    <p class="hint">Click the wheel to spin.</p>
+
+    <textarea id="items" spellcheck="false">Alice
+Bob
+Charlie.
+Diana
+Ethan</textarea>
+
+    <div>
+      <button id="updateButton">Update Wheel</button>
+    </div>
+
+    <div id="result"></div>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("wheel");
+    const ctx = canvas.getContext("2d");
+    const textarea = document.getElementById("items");
+    const result = document.getElementById("result");
+    const updateButton = document.getElementById("updateButton");
+
+    let items = [];
+    let currentRotation = 0;
+    let spinning = false;
+
+    function readItems() {
+      return textarea.value
+        .split(/\r?\n/)
+        .map(value => value.trim())
+        .filter(Boolean);
+    }
+
+    function visibleName(value) {
+      return value.replace(/\./g, "").trim();
+    }
+
+    function drawWheel() {
+      items = readItems();
+      const size = canvas.width;
+      const center = size / 2;
+      const radius = center - 10;
+
+      ctx.clearRect(0, 0, size, size);
+
+      if (items.length === 0) {
+        ctx.beginPath();
+        ctx.arc(center, center, radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+        ctx.strokeStyle = "#111";
+        ctx.lineWidth = 8;
+        ctx.stroke();
+
+        ctx.fillStyle = "#111";
+        ctx.font = "bold 34px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("Add some names", center, center);
+        return;
+      }
+
+      const slice = (Math.PI * 2) / items.length;
+
+      items.forEach((item, index) => {
+        const start = index * slice;
+        const end = start + slice;
+
+        ctx.beginPath();
+        ctx.moveTo(center, center);
+        ctx.arc(center, center, radius, start, end);
+        ctx.closePath();
+        ctx.fillStyle = index % 2 === 0 ? "#fff" : "#111";
+        ctx.fill();
+        ctx.strokeStyle = "#111";
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(center, center);
+        ctx.rotate(start + slice / 2);
+
+        const text = visibleName(item);
+        const fontSize = Math.max(18, Math.min(34, 320 / Math.max(6, text.length)));
+        ctx.font = `bold ${fontSize}px Arial`;
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = index % 2 === 0 ? "#111" : "#fff";
+
+        const maxWidth = radius * 0.66;
+        let shown = text;
+        while (ctx.measureText(shown).width > maxWidth && shown.length > 3) {
+          shown = shown.slice(0, -2);
+        }
+        if (shown !== text) shown += "…";
+
+        ctx.fillText(shown, radius - 36, 0);
+        ctx.restore();
+      });
+    }
+
+    function selectWinningIndex() {
+      const riggedIndexes = items
+        .map((item, index) => item.includes(".") ? index : -1)
+        .filter(index => index !== -1);
+
+      if (riggedIndexes.length > 0) {
+        return riggedIndexes[Math.floor(Math.random() * riggedIndexes.length)];
+      }
+
+      return Math.floor(Math.random() * items.length);
+    }
+
+    function spinWheel() {
+      if (spinning) return;
+
+      items = readItems();
+      if (items.length < 2) {
+        result.textContent = "Please add at least two items.";
+        drawWheel();
+        return;
+      }
+
+      spinning = true;
+      updateButton.disabled = true;
+      textarea.disabled = true;
+      result.textContent = "";
+
+      const winnerIndex = selectWinningIndex();
+      const sliceDegrees = 360 / items.length;
+
+      // Canvas slices begin at the right side, and the pointer is also on the right.
+      // Rotate so the center of the selected slice finishes underneath the pointer.
+      const winnerCenter = winnerIndex * sliceDegrees + sliceDegrees / 2;
+      const desiredNormalizedRotation = (360 - winnerCenter) % 360;
+      const currentNormalizedRotation = ((currentRotation % 360) + 360) % 360;
+      const correction =
+        (desiredNormalizedRotation - currentNormalizedRotation + 360) % 360;
+
+      const extraTurns = 6 + Math.floor(Math.random() * 3);
+      currentRotation += extraTurns * 360 + correction;
+
+      canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+      window.setTimeout(() => {
+        result.textContent = visibleName(items[winnerIndex]);
+        spinning = false;
+        updateButton.disabled = false;
+        textarea.disabled = false;
+      }, 5100);
+    }
+
+    canvas.addEventListener("click", spinWheel);
+
+    updateButton.addEventListener("click", () => {
+      if (spinning) return;
+      result.textContent = "";
+      drawWheel();
+    });
+
+    textarea.addEventListener("input", () => {
+      if (!spinning) drawWheel();
+    });
+
+    drawWheel();
+  </script>
+</body>
+</html>
