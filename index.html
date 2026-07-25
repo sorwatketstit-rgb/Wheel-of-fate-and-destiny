@@ -10,9 +10,9 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background: #fff;
-      color: #111;
-      font-family: Arial, Helvetica, sans-serif;
+      background: radial-gradient(circle at top left, rgba(59,130,246,.14), transparent 34%), radial-gradient(circle at bottom right, rgba(34,197,94,.12), transparent 30%), #f4f7fb;
+      color: #172033;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       display: flex;
       justify-content: center;
       align-items: flex-start;
@@ -21,7 +21,13 @@
     .app {
       width: min(92vw, 720px);
       text-align: center;
-      padding: 36px 16px 60px;
+      padding: 34px 16px 60px;
+      background: rgba(255,255,255,.88);
+      border: 1px solid rgba(255,255,255,.75);
+      border-radius: 28px;
+      box-shadow: 0 18px 55px rgba(40,55,85,.15);
+      margin-top: 28px;
+      backdrop-filter: blur(14px);
     }
 
     h1 {
@@ -42,7 +48,8 @@
       height: 100%;
       display: block;
       border-radius: 50%;
-      border: 5px solid #111;
+      border: 8px solid #fff;
+      box-shadow: 0 18px 34px rgba(30,40,65,.22);
       cursor: pointer;
       transition: transform 5s cubic-bezier(.12,.72,.08,1);
       background: #fff;
@@ -57,7 +64,7 @@
       height: 0;
       border-top: 18px solid transparent;
       border-bottom: 18px solid transparent;
-      border-right: 34px solid #111;
+      border-right: 34px solid #172033;
       z-index: 2;
       pointer-events: none;
     }
@@ -70,7 +77,8 @@
       height: 54px;
       border-radius: 50%;
       background: #fff;
-      border: 5px solid #111;
+      border: 8px solid #fff;
+      box-shadow: 0 18px 34px rgba(30,40,65,.22);
       pointer-events: none;
     }
 
@@ -84,12 +92,12 @@
       width: min(100%, 520px);
       min-height: 180px;
       resize: vertical;
-      border: 2px solid #111;
-      border-radius: 8px;
+      border: 1px solid #dbe2ec;
+      border-radius: 16px;
       padding: 14px;
       font: 16px/1.45 Arial, Helvetica, sans-serif;
-      background: #fff;
-      color: #111;
+      background: radial-gradient(circle at top left, rgba(59,130,246,.14), transparent 34%), radial-gradient(circle at bottom right, rgba(34,197,94,.12), transparent 30%), #f4f7fb;
+      color: #172033;
       outline: none;
     }
 
@@ -107,10 +115,10 @@
     button {
       margin-top: 14px;
       border: 2px solid #111;
-      background: #111;
+      background: #172033;
       color: #fff;
       padding: 10px 18px;
-      border-radius: 7px;
+      border-radius: 13px;
       font-size: 15px;
       cursor: pointer;
     }
@@ -123,6 +131,30 @@
       .app { padding-top: 22px; }
       .wheel-wrap { width: min(82vw, 430px); }
     }
+  
+
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 50; display: none;
+      align-items: center; justify-content: center; padding: 20px;
+      background: rgba(14,20,35,.65); backdrop-filter: blur(8px);
+    }
+    .modal-backdrop.show { display: flex; animation: fadeIn .2s ease-out; }
+    .winner-card {
+      width: min(92vw, 430px); background: #fff; border-radius: 26px;
+      padding: 30px; text-align: center; box-shadow: 0 30px 90px rgba(0,0,0,.3);
+      animation: popIn .3s ease-out;
+    }
+    .winner-icon {
+      width: 112px; height: 112px; margin: 0 auto 18px; border-radius: 28px;
+      display: grid; place-items: center; font-size: 58px;
+      background: linear-gradient(135deg, rgba(239,68,68,.18), rgba(59,130,246,.18) 50%, rgba(34,197,94,.18));
+    }
+    .winner-card h2 { margin: 0 0 8px; color: #687086; font-size: 22px; }
+    .winner-name { margin: 0; font-size: clamp(30px, 7vw, 44px); font-weight: 900; overflow-wrap: anywhere; }
+    #closeModal { width: 100%; margin-top: 24px; padding: 13px 18px; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes popIn { from { opacity: 0; transform: scale(.9) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
   </style>
 </head>
 <body>
@@ -151,6 +183,16 @@ Ethan</textarea>
     <div id="result"></div>
   </main>
 
+
+  <div id="winnerModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="winnerTitle">
+    <div class="winner-card">
+      <div class="winner-icon" aria-hidden="true">🏆</div>
+      <h2 id="winnerTitle">The winner is</h2>
+      <p id="winnerName" class="winner-name"></p>
+      <button id="closeModal">Close</button>
+    </div>
+  </div>
+
   <script>
     const canvas = document.getElementById("wheel");
     const ctx = canvas.getContext("2d");
@@ -158,6 +200,10 @@ Ethan</textarea>
     const result = document.getElementById("result");
     const updateButton = document.getElementById("updateButton");
     const shuffleButton = document.getElementById("shuffleButton");
+    const winnerModal = document.getElementById("winnerModal");
+    const winnerName = document.getElementById("winnerName");
+    const closeModal = document.getElementById("closeModal");
+    const COLORS = ["#ff4d4f", "#3b82ff", "#22d65f", "#ffd93d"];
 
     const HIDDEN_RIG_MARKER = "\u2063";
 
@@ -231,7 +277,7 @@ Ethan</textarea>
         ctx.moveTo(center, center);
         ctx.arc(center, center, radius, start, end);
         ctx.closePath();
-        ctx.fillStyle = index % 2 === 0 ? "#fff" : "#111";
+        ctx.fillStyle = COLORS[index % COLORS.length];
         ctx.fill();
         ctx.strokeStyle = "#111";
         ctx.lineWidth = 4;
@@ -246,7 +292,10 @@ Ethan</textarea>
         ctx.font = `bold ${fontSize}px Arial`;
         ctx.textAlign = "right";
         ctx.textBaseline = "middle";
-        ctx.fillStyle = index % 2 === 0 ? "#111" : "#fff";
+        ctx.fillStyle = "#fff";
+        ctx.shadowColor = "rgba(0,0,0,.3)";
+        ctx.shadowBlur = 6;
+        ctx.shadowOffsetY = 2;
 
         const maxWidth = radius * 0.66;
         let shown = text;
@@ -270,6 +319,17 @@ Ethan</textarea>
       }
 
       return Math.floor(Math.random() * wheelItems.length);
+    }
+
+
+    function showWinner(name) {
+      winnerName.textContent = name;
+      winnerModal.classList.add("show");
+      closeModal.focus();
+    }
+
+    function hideWinner() {
+      winnerModal.classList.remove("show");
     }
 
     function spinWheel() {
@@ -304,7 +364,9 @@ Ethan</textarea>
       canvas.style.transform = `rotate(${currentRotation}deg)`;
 
       window.setTimeout(() => {
-        result.textContent = visibleName(wheelItems[winnerIndex]);
+        const selectedName = visibleName(wheelItems[winnerIndex]);
+        result.textContent = selectedName;
+        showWinner(selectedName);
         spinning = false;
         updateButton.disabled = false;
         shuffleButton.disabled = false;
@@ -313,6 +375,7 @@ Ethan</textarea>
     }
 
     canvas.addEventListener("click", spinWheel);
+    closeModal.addEventListener("click", hideWinner);
 
     updateButton.addEventListener("click", () => {
       if (spinning) return;
