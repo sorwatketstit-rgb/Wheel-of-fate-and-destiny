@@ -203,7 +203,35 @@ Ethan</textarea>
     const winnerModal = document.getElementById("winnerModal");
     const winnerName = document.getElementById("winnerName");
     const closeModal = document.getElementById("closeModal");
-    const COLORS = ["#ff4d4f", "#3b82ff", "#22d65f", "#ffd93d"];
+
+    const COLORS = [
+    "#FF4D4F", // Bright Red
+    "#3B82FF", // Bright Blue
+    "#22D65F", // Bright Green
+    "#FFD93D"  // Bright Yellow
+    ];
+
+    function generateWheelColors(count) {
+
+    if (count <= 4)
+        return COLORS.slice(0, count);
+
+    const wheelColors = [];
+
+    // First cycle
+    for (let i = 0; i < 4; i++)
+        wheelColors.push(COLORS[i]);
+
+    // Offset by one color (Blue) after the first cycle
+    let index = 1;
+
+    while (wheelColors.length < count) {
+        wheelColors.push(COLORS[index]);
+        index = (index + 1) % COLORS.length;
+    }
+
+    return wheelColors;
+}
 
     const HIDDEN_RIG_MARKER = "\u2063";
 
@@ -244,6 +272,7 @@ Ethan</textarea>
 
     function drawWheel() {
       const displayItems = wheelItems;
+      const wheelColors = generateWheelColors(displayItems.length);
       const size = canvas.width;
       const center = size / 2;
       const radius = center - 10;
@@ -277,7 +306,7 @@ Ethan</textarea>
         ctx.moveTo(center, center);
         ctx.arc(center, center, radius, start, end);
         ctx.closePath();
-        ctx.fillStyle = COLORS[index % COLORS.length];
+        ctx.fillStyle = wheelColors[index];
         ctx.fill();
         ctx.strokeStyle = "#111";
         ctx.lineWidth = 4;
